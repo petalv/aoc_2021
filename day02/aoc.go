@@ -75,11 +75,9 @@ func Reducer1(movements chan Movement, pos chan Position) {
 		}
 		if value.Direction == "down" {
 			finalPosition.Depth += value.Step
-			finalPosition.Aim += value.Step
 		}
 		if value.Direction == "up" {
 			finalPosition.Depth -= value.Step
-			finalPosition.Aim -= value.Step
 		}
 	}
 	pos <- finalPosition
