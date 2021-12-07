@@ -31,7 +31,6 @@ func lanterns(days int) {
 		fishes := queue[0]
 		queue = queue[1:]
 		queue = append(queue, fishes)
-		data = append(data, fishes)
 		queue[6] += fishes
 
 		if cycleDay == 8 {
