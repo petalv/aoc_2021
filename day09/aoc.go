@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"os"
 	"sort"
 	"strconv"
@@ -30,17 +29,40 @@ func main() {
 	}
 }
 
+func part1(matrix [][]int) []Coord {
+	var visited []Coord
+	var zap []Coord
+	visit := []Coord{{0, 0, matrix[0][0]}}
+	directions := []string{"W", "S", "E", "N"}
+	var currentCoord Coord
+	for len(visit) != 0 {
+		currentCoord, visit = visit[0], visit[1:]
+		visited = append(visited, currentCoord)
+		for _, d := range directions {
+			visitCoord, zapCoord, err := check(d, currentCoord, visited, matrix)
+			if err == nil {
+				if !contains(visit, visitCoord) {
+					visit = append(visit, visitCoord)
+				}
+				if !contains(zap, zapCoord) {
+					zap = append(zap, zapCoord)
+				}
+			}
+		}
+	}
+	return getLowPoints(visited, zap)
+}
+
 func part2(matrix [][]int) int {
 	lowPoints := part1(matrix)
 	var visit []Coord
 	var visited []Coord
 	var currentCoord Coord
 	directions := []string{"W", "S", "E", "N"}
-	var keepSum []int
+	var basinSum []int
 	for _, c := range lowPoints {
 		keep := []Coord{c}
 		visit = append(visit, c)
-
 		for {
 			if len(visit) == 0 {
 				break
@@ -60,51 +82,10 @@ func part2(matrix [][]int) int {
 				}
 			}
 		}
-		keepSum = append(keepSum, len(keep))
+		basinSum = append(basinSum, len(keep))
 	}
-	sort.Ints(keepSum)
-	return keepSum[len(keepSum)-1] * keepSum[len(keepSum)-2] * keepSum[len(keepSum)-3]
-}
-
-func part1(matrix [][]int) []Coord {
-	var visited []Coord
-	var zap []Coord
-	visit := []Coord{Coord{0, 0, matrix[0][0]}}
-	directions := []string{"W", "S", "E", "N"}
-	var currentCoord Coord
-	for {
-		if len(visit) == 0 {
-			break
-		}
-		currentCoord, visit = visit[0], visit[1:]
-		visited = append(visited, currentCoord)
-		for _, d := range directions {
-			visitCoord, zapCoord, err := check(d, currentCoord, visited, matrix)
-			if err == nil {
-				if !contains(visit, visitCoord) {
-					visit = append(visit, visitCoord)
-				}
-
-				if !contains(zap, zapCoord) {
-					zap = append(zap, zapCoord)
-				}
-			}
-		}
-	}
-
-	var sc []string
-	for _, c := range zap {
-		sc = append(sc, fmt.Sprintf("%d%d", c.x, c.y))
-	}
-	//sort.Strings(sc)
-	var vc []string
-	for _, c := range visited {
-		vc = append(vc, fmt.Sprintf("%d%d", c.x, c.y))
-	}
-	//sort.Strings(vc)
-	// fmt.Printf("Zapped %v\n", strings.Join(sc, ","))
-	// fmt.Printf("visited %v\n", strings.Join(vc, ","))
-	return getLowPoints(visited, zap)
+	sort.Ints(basinSum)
+	return basinSum[len(basinSum)-1] * basinSum[len(basinSum)-2] * basinSum[len(basinSum)-3]
 }
 
 func getLowPoints(visited []Coord, zap []Coord) []Coord {
@@ -118,9 +99,9 @@ func getLowPoints(visited []Coord, zap []Coord) []Coord {
 }
 
 func check(d string, coord Coord, visited []Coord, matrix [][]int) (Coord, Coord, error) {
-	s := getCoord(d, coord.x, coord.y, matrix)
-	if s.x < 0 || s.y < 0 || s.y >= len(matrix) || s.x >= len(matrix[s.y]) {
-		return Coord{}, Coord{}, errors.New("OutofBounds")
+	s, err := getCoord(d, coord.x, coord.y, matrix)
+	if err != nil {
+		return Coord{}, Coord{}, err
 	}
 	if contains(visited, s) {
 		return Coord{}, Coord{}, errors.New("AlreadyVisited")
@@ -132,7 +113,7 @@ func check(d string, coord Coord, visited []Coord, matrix [][]int) (Coord, Coord
 	}
 }
 
-func getCoord(d string, x int, y int, matrix [][]int) Coord {
+func getCoord(d string, x int, y int, matrix [][]int) (Coord, error) {
 	var nx, ny int
 	switch d {
 	case "W":
@@ -148,17 +129,17 @@ func getCoord(d string, x int, y int, matrix [][]int) Coord {
 		nx, ny = x, y-1
 		break
 	default:
-		panic("bad heading")
+		return Coord{}, errors.New("UnknownArgument " + d)
 	}
-	val := getValAt(nx, ny, matrix)
-	return Coord{nx, ny, val}
+	val, err := getValAt(nx, ny, matrix)
+	return Coord{nx, ny, val}, err
 }
 
-func getValAt(x int, y int, matrix [][]int) int {
+func getValAt(x int, y int, matrix [][]int) (int, error) {
 	if x >= 0 && y >= 0 && y < len(matrix) && x < len(matrix[y]) {
-		return matrix[y][x]
+		return matrix[y][x], nil
 	}
-	return -1
+	return -1, errors.New("OutOfBounds")
 }
 
 func contains(slice []Coord, item Coord) bool {
@@ -167,7 +148,7 @@ func contains(slice []Coord, item Coord) bool {
 
 func indexOf(slice []Coord, item Coord) int {
 	for i, coord := range slice {
-		if coord.x == item.x && coord.y == item.y {
+		if equals(coord, item) {
 			return i
 		}
 	}
@@ -197,7 +178,7 @@ func readInput(path string) [][]int {
 
 func extractNumbers(line string) []int {
 	var numbers []int
-	for idx, _ := range line {
+	for idx := range line {
 		numVal, _ := strconv.Atoi(string(line[idx]))
 		numbers = append(numbers, numVal)
 	}
