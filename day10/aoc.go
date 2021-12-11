@@ -25,7 +25,7 @@ func part1(data []string) int {
 		if err != nil {
 			se, seOk := err.(*SyntaxError)
 			if seOk {
-				sum += score1(se.char)
+				sum += score1(se.token)
 			}
 		}
 	}
@@ -47,8 +47,8 @@ func part2(data []string) []int {
 	return sum
 }
 
-func score1(c int) int {
-	switch c {
+func score1(t int) int {
+	switch t {
 	case RIGHT_PARAN:
 		return 3
 	case RIGHT_BRACKET:
@@ -62,15 +62,15 @@ func score1(c int) int {
 
 func calcScorePart2(completions []int) int {
 	sum := 0
-	for _, c := range completions {
+	for _, t := range completions {
 		sum = sum * 5
-		sum += score2(c - 1)
+		sum += score2(t - 1)
 	}
 	return sum
 }
 
-func score2(c int) int {
-	switch c {
+func score2(t int) int {
+	switch t {
 	case RIGHT_PARAN:
 		return 1
 	case RIGHT_BRACKET:
@@ -101,8 +101,8 @@ const CHAR_RIGHT_ANGLE = '>'
 const CHAR_LEFT_ANGLE = '<'
 
 type SyntaxError struct {
-	pos  int
-	char int
+	pos   int
+	token int
 }
 
 type IncompleteError struct {
@@ -110,7 +110,7 @@ type IncompleteError struct {
 }
 
 func (e *SyntaxError) Error() string {
-	return fmt.Sprintf("Error %d: %s not allowed", e.pos, e.char)
+	return fmt.Sprintf("Error %d: %s not allowed", e.pos, e.token)
 }
 
 func (e *IncompleteError) Error() string {
@@ -121,21 +121,21 @@ func parseLine(line string) error {
 	var state []int
 	var currentState int
 	for pos, c := range string(line) {
-		r := toRune(c)
+		t := toToken(c)
 		currentState, state = pop(state)
-		a := allowed(r, currentState)
+		a := allowed(t, currentState)
 		if !a {
 			return &SyntaxError{
-				pos:  pos,
-				char: r,
+				pos:   pos,
+				token: t,
 			}
 		}
 
-		if !isClose(r) {
+		if !isClose(t) {
 			if currentState != -1 {
 				state = append(state, currentState)
 			}
-			state = append(state, r)
+			state = append(state, t)
 		}
 	}
 
@@ -147,51 +147,39 @@ func parseLine(line string) error {
 	return nil
 }
 
-func reverse(s []int) []int {
-	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
-		s[i], s[j] = s[j], s[i]
-	}
-	return s
-}
-
-func allowed(c int, currentState int) bool {
+func allowed(t int, currentState int) bool {
 	if currentState == -1 {
-		return isOpen(c)
-	}
-
-	if currentState == LEFT_BRACKET {
-		if isOpen(c) || c == RIGHT_BRACKET {
+		return isOpen(t)
+	} else if currentState == LEFT_BRACKET {
+		if isOpen(t) || t == RIGHT_BRACKET {
 			return true
 		}
-	}
-	if currentState == LEFT_PARAN {
-		if isOpen(c) || c == RIGHT_PARAN {
+	} else if currentState == LEFT_PARAN {
+		if isOpen(t) || t == RIGHT_PARAN {
 			return true
 		}
-	}
-	if currentState == LEFT_CURLY {
-		if isOpen(c) || c == RIGHT_CURLY {
+	} else if currentState == LEFT_CURLY {
+		if isOpen(t) || t == RIGHT_CURLY {
 			return true
 		}
-	}
-	if currentState == LEFT_ANGLE {
-		if isOpen(c) || c == RIGHT_ANGLE {
+	} else if currentState == LEFT_ANGLE {
+		if isOpen(t) || t == RIGHT_ANGLE {
 			return true
 		}
 	}
 	return false
 }
 
-func isOpen(c int) bool {
-	return c == LEFT_PARAN || c == LEFT_BRACKET || c == LEFT_CURLY || c == LEFT_ANGLE
+func isOpen(t int) bool {
+	return t == LEFT_PARAN || t == LEFT_BRACKET || t == LEFT_CURLY || t == LEFT_ANGLE
 }
 
-func isClose(c int) bool {
-	return c == RIGHT_PARAN || c == RIGHT_BRACKET || c == RIGHT_CURLY || c == RIGHT_ANGLE
+func isClose(t int) bool {
+	return t == RIGHT_PARAN || t == RIGHT_BRACKET || t == RIGHT_CURLY || t == RIGHT_ANGLE
 }
 
-func toRune(c rune) int {
-	switch c {
+func toToken(r rune) int {
+	switch r {
 	case CHAR_RIGHT_PARAN:
 		return RIGHT_PARAN
 	case CHAR_LEFT_PARAN:
@@ -211,6 +199,13 @@ func toRune(c rune) int {
 	default:
 		return -1
 	}
+}
+
+func reverse(s []int) []int {
+	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+		s[i], s[j] = s[j], s[i]
+	}
+	return s
 }
 
 func readInput(path string) []string {
